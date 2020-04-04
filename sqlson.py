@@ -2,6 +2,10 @@ from collections.abc import MutableMapping
 from contextlib import suppress
 from operator import itemgetter
 import sqlite3
+import ujson
+
+# from orjson import loads, dumps
+# currently no speedup
 
 
 class SQLDict(MutableMapping):
@@ -12,9 +16,13 @@ class SQLDict(MutableMapping):
         with suppress(sqlite3.OperationalError):
             c.execute("CREATE TABLE Dict (key text, value text)")
             c.execute("CREATE UNIQUE INDEX Kndx ON Dict (key)")
+            c.execute("PRAGMA journal_mode = 'WAL';")
+            c.execute("PRAGMA synchronous = '1';")
+            c.execute("PRAGMA cache_size = -64000;")
         self.update(items, **kwargs)
 
     def __setitem__(self, key, value):
+        value = ujson.dumps(value)
         if key in self:
             del self[key]
         with self.conn as c:
@@ -25,7 +33,8 @@ class SQLDict(MutableMapping):
         row = c.fetchone()
         if row is None:
             raise KeyError(key)
-        return row[0]
+        # return row[0]
+        return ujson.loads(row[0])
 
     def __delitem__(self, key):
         if key not in self:

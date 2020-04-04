@@ -1,0 +1,5 @@
+aiosqlite
+aiostream
+orjson
+ujson
+uvloop

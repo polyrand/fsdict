@@ -1,0 +1,14 @@
+
+autoflake
+bandit
+black
+flake8
+flake8-bugbear
+ipykernel
+isort
+mypy
+pip-tools
+pycodestyle
+pydocstyle
+pytest
+setuptools

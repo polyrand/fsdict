@@ -3,6 +3,9 @@ from contextlib import suppress
 from operator import itemgetter
 import sqlite3
 
+# Code from the talk [Build powerful, new data structures with Python's abstract base classes]
+# (https://www.youtube.com/watch?v=S_ipdVNSFlo) by [Raymond Hettinger](https://twitter.com/raymondh).
+
 
 class SQLDict(MutableMapping):
     def __init__(self, dbname, items=[], **kwargs):
@@ -11,7 +14,7 @@ class SQLDict(MutableMapping):
         c = self.conn.cursor()
         with suppress(sqlite3.OperationalError):
             c.execute("CREATE TABLE Dict (key text, value text)")
-            c.execute("CREATE UNIQUE INDEX Kndx ON Dict (key)")
+            c.execute("CREATE UNIQUE INDEX KIndx ON Dict (key)")
         self.update(items, **kwargs)
 
     def __setitem__(self, key, value):

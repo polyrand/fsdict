@@ -191,11 +191,11 @@ class FileDict(MutableMapping):
         # files = [file.split("____")[0] for file in os.listdir(self.dirname)]
         return f"FileDict{tuple(self.items())}"
 
-    def compress(self, filename: str = None):
+    def compress(self, filename: str = None, **kwargs):
         """Create tar.gz file with the same name as the dictionary."""
 
         if not filename:
             filename = self.dirname
 
-        with tarfile.open(filename + ".tar.gz", "w:gz") as tar:
+        with tarfile.open(filename + ".tar.gz", mode="w:gz", **kwargs) as tar:
             tar.add(self.dirname, arcname=filename, recursive=True)

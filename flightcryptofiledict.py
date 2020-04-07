@@ -45,10 +45,10 @@ class FileDict(MutableMapping):
     >>> enc_filedict.decoder = lambda x: pickle.loads(x)
 
     >>> enc_filedict["myfunc"] = math.cos
-    >>> enc_filedict["myf"]
+    >>> enc_filedict["myfunc"]
     <function math.cos(x, /)>
 
-    >>> enc_filedict["myf"](23)
+    >>> enc_filedict["myfunc"](23)
     -0.5328330203333975
 
     >>> import json

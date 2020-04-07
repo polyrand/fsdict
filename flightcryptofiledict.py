@@ -1,23 +1,22 @@
+import base64
+import os
+import secrets
+import tarfile
 from collections.abc import MutableMapping
 from contextlib import suppress
-import os
 from glob import glob
-import secrets
+from typing import Callable
+
+# import cryptography
+from cryptography.fernet import Fernet
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 try:
     from functools import cached_property as cache
 except ImportError:
     cache = None
-
-import base64
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-
-# import cryptography
-from cryptography.fernet import Fernet
-
-from typing import Callable
 
 
 class FileDict(MutableMapping):
@@ -191,3 +190,12 @@ class FileDict(MutableMapping):
     def __repr__(self):
         # files = [file.split("____")[0] for file in os.listdir(self.dirname)]
         return f"FileDict{tuple(self.items())}"
+
+    def compress(self, filename: str = None):
+        """Create tar.gz file with the same name as the dictionary."""
+
+        if not filename:
+            filename = self.dirname
+
+        with tarfile.open(filename + ".tar.gz", "w:gz") as tar:
+            tar.add(self.dirname, arcname=filename, recursive=True)

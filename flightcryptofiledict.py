@@ -35,7 +35,7 @@ class FileDict(MutableMapping):
     Example:
     _______
 
-    >>> from cryptofiledict import FileDict
+    >>> from flightcryptofiledict import FileDict
     >>> enc_filedict = FileDict("cryptest")
 
     >>> import pickle
@@ -70,14 +70,16 @@ class FileDict(MutableMapping):
         self,
         dirname: str,
         pairs=(),
-        password: str = os.getenv("PASS").encode(),
+        password: str = None,
         encoder: Callable = lambda x: x.encode(),
         decoder: Callable = lambda x: x.decode(),
         **kwargs,
     ):
         self.dirname: str = dirname
         # get PASS from env if it is not provided
-        self.password: str = password
+        self.password: str = os.getenv(
+            "PASS"
+        ).encode() if not password else password.encode()
         # self.kdfgen = lambda newsalt: PBKDF2HMAC(
         #     algorithm=hashes.SHA256(),
         #     length=32,

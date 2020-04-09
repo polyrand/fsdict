@@ -44,6 +44,8 @@ d = FileDict("newname", password="secretpassword")
 ```
 
 
+**Using different data types**
+
 If the dictionary values need to be something different from strings a custom encoder/decoder can be passed. The only condition is that those functions should return a `bytes` object. Examples:
 
 ```python
@@ -75,10 +77,30 @@ If the dictionary values need to be something different from strings a custom en
 12
 ```
 
+**Compressing to file**
+
+Create a tarfile with the same name as the dictionary.
+
+```python
+enc_filedict.compress()
+```
+
+You can use a different filename. The `**kwargs` passed to the function will be passed to the tarfile function.
+
+```python
+enc_filedict.compress(filename="compressed", compresslevel=7)
+```
+
+The command above will generate the file: `compressed.tar.gz`
+
 
 ## `cryptofiledict.py`
 
 More or less the same as before but the salt is static. The salt is parsed as a base64 encoded string. It will be less secure but faster.
+
+## `sqldict.py`
+
+Uses an SQLite databse instead of the filesystem.
 
 
 ## Meta

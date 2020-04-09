@@ -7,7 +7,8 @@ import base64
 import os
 import secrets
 import tarfile
-from glob import glob
+
+# from glob import glob
 from typing import Callable
 
 # import cryptography
@@ -100,9 +101,11 @@ class SQLDict(MutableMapping):
         return map(itemgetter(0), c.fetchall())
 
     def __repr__(self):
-        return (
-            f"{type(self).__name__}(dbname={self.dbname!r}, items={list(self.items())})"
-        )
+        return f"{type(self).__name__}(dbname={self.dbname!r})"  # , items={list(self.items())})"
+
+    def vacuum(self):
+        with self.conn as c:
+            c.execute("VACUUM;")
 
     def close(self):
         self.conn.close()

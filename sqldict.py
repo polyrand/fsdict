@@ -48,5 +48,9 @@ class SQLDict(MutableMapping):
             f"{type(self).__name__}(dbname={self.dbname!r}, items={list(self.items())})"
         )
 
+    def vacuum(self):
+        with self.conn as c:
+            c.execute("VACUUM;")
+
     def close(self):
         self.conn.close()

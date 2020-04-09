@@ -6,10 +6,11 @@ import sqlite3
 import base64
 import os
 import secrets
-import tarfile
+
+# import tarfile
 
 # from glob import glob
-from typing import Callable
+from typing import Callable, Union, ByteString, Optional
 
 # import cryptography
 from cryptography.fernet import Fernet
@@ -20,33 +21,61 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 try:
     from functools import cached_property as cache
 except ImportError:
-    cache = None
+    from functools import wraps
+
+    # decorator that does nothing and just runs the function, but accepts its kwargs
+    # I'm not sure if this is the best option
+    def cache(maxsize):
+        def wrapper(f):
+            @wraps(f)
+            def wrapped(*args, **kwargs):
+                return f(*args, **kwargs)
+
+            return wrapped
+
+        return wrapper
 
 
 class SQLDict(MutableMapping):
+
+    # 234375 == using 15mb of memory to cache fernet objects
+    # cache_n = 234375
+
     def __init__(
         self,
         dbname,
         items=[],
-        password: str = None,
+        password: Optional[str] = None,
         encoder: Callable = lambda x: x.encode(),
         decoder: Callable = lambda x: x.decode(),
+        cache_size: Union[float, int] = None,
         **kwargs,
     ):
         self.dbname = dbname
         self.conn = sqlite3.connect(dbname)
         c = self.conn.cursor()
-        self.password: str = os.getenv(
+        self.password: ByteString = os.getenv(
             "PASS"
         ).encode() if not password else password.encode()
         self.encoder = encoder
         self.decoder = decoder
 
+        # 6.4e-05 is de size in MB of a fernet object that can
+        # encrypt / decrypt data (measured with sys.getsizeof)
+        # 234375 == using 15mb of memory to cache fernet objects
+        # if cache_size:
+        #     nonlocal cache_n
+        #     cache_n = cache_size / 6.4e-05
+
         with suppress(sqlite3.OperationalError):
             c.execute("CREATE TABLE Dict (key text, value blob, salt text)")
             c.execute("CREATE UNIQUE INDEX KIndx ON Dict (key)")
+
         self.update(items, **kwargs)
 
+    # 234375 == using 15mb of memory to cache fernet objects
+    # this will only have effect if running python >= 3.8
+    @cache(maxsize=234375)
     def _fernetgen(self, newsalt):
         kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),
@@ -60,8 +89,8 @@ class SQLDict(MutableMapping):
 
         return Fernet(key)
 
-    if cache:
-        self._fernetgen = cache(maxsize=128)(self._fernetgen)
+    # if cache:
+    #     _fernetgen = cache(maxsize=self.cache_n)(_fernetgen)
 
     def __setitem__(self, key, value):
         if key in self:

@@ -58,18 +58,20 @@ class FileDict(MutableMapping):
         self,
         dirname: str,
         pairs=(),
-        password: bytes = os.getenv("PASS").encode(),
-        salt: bytes = base64.decodebytes(
-            os.getenv("SALT").encode().decode("unicode_escape").encode()
-        ),
+        password: str = None,
+        salt: str = None,
         encoder: Callable = lambda x: x.encode(),
         decoder: Callable = lambda x: x.decode(),
         **kwargs,
     ):
         self.dirname: str = dirname
         # get PASS from env if it is not provided
-        self.password: bytes = password
-        self.salt: bytes = salt  # provided as base64 string (not bytes)
+        self.password: bytes = os.getenv(
+            "PASS"
+        ).encode() if not password else password.encode()
+        self.salt: bytes = base64.decodebytes(
+            os.getenv("SALT").encode().decode("unicode_escape").encode()
+        ) if not salt else salt.encode()  # provided as base64 string (not bytes)
         self.kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),
             length=32,

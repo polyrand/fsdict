@@ -13,10 +13,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
-try:
-    from functools import cached_property as cache
-except ImportError:
-    cache = None
+from methodtools import lru_cache
 
 
 class FileDict(MutableMapping):
@@ -77,7 +74,7 @@ class FileDict(MutableMapping):
     ):
         self.dirname: str = dirname
         # get PASS from env if it is not provided
-        self.password: str = os.getenv(
+        self.password: bytes = os.getenv(
             "PASS"
         ).encode() if not password else password.encode()
         # self.kdfgen = lambda newsalt: PBKDF2HMAC(
@@ -99,6 +96,8 @@ class FileDict(MutableMapping):
             os.mkdir(dirname)
         self.update(pairs, **kwargs)
 
+    # 234375 == using 15mb of memory to cache fernet objects
+    @lru_cache(maxsize=234375)
     def fernetgen(self, newsalt):
         kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),
@@ -111,9 +110,6 @@ class FileDict(MutableMapping):
         key = base64.urlsafe_b64encode(kdf.derive(self.password))
 
         return Fernet(key)
-
-    if cache:
-        self.fernetgen = cache(maxsize=128)(self.fernetgen)
 
     def __setitem__(self, key, value):
         # delete file if exists. Since the salt is generated

@@ -1,9 +1,8 @@
 # Produtils
 
-
 This started as "copying the code" from the talk [Build powerful, new data structures with Python's abstract base classes](https://www.youtube.com/watch?v=S_ipdVNSFlo) by [Raymond Hettinger](https://twitter.com/raymondh) since I couldn't find it anywhere.
 
-After that I started modifying the files.
+After that I started modifying the code and creating new utilities.
 
 ## `flightcryptofiledict.py`
 
@@ -11,7 +10,7 @@ Dictionary implementation that saves everything to files in disk.
 
 **Features**
 
-When a value is going it be written to the disk a new salt is created. Then this salt is passed to the hashing function. The values are encrypted using [`PBKDF2HMAC`](https://cryptography.io/en/latest/hazmat/primitives/key-derivation-functions/#cryptography.hazmat.primitives.kdf.pbkdf2.PBKDF2HMAC). The salt is generated for each entry. It is saved in the filename separated by a quadruple underscore. **Don't use quadruple underscore** in your variable names when setting/getting the dictionary, it will break, you can use double and triple underscores.	 It can be fixed adding a couple of `if` statements inside, but so far I have never had to create a key/value name with `4*_` inside. 
+When a value is going it be written to the disk a new salt is created. Then this salt is passed to the hashing function. The values are encrypted using [`PBKDF2HMAC`](https://cryptography.io/en/latest/hazmat/primitives/key-derivation-functions/#cryptography.hazmat.primitives.kdf.pbkdf2.PBKDF2HMAC). The salt is generated for each entry. It is saved in the filename separated by a quadruple underscore. **Don't use quadruple underscore** in your variable names when setting/getting the dictionary, it will break, you can use double and triple underscores. It can be fixed adding a couple of `if` statements inside, but so far I have never had to create a key/value name with `4*_` inside.
 
 The salt is 64 bytes long and it's created using [`secrets.token_urlsafe`](https://docs.python.org/3/library/secrets.html#secrets.token_urlsafe). The salt is created as a string and then encoded to bytes so that it's easier to implement a static salt that you can keep as an environment variable.
 
@@ -22,6 +21,8 @@ It is a single self-contained 200 lines-of-code file. The only dependency is `cr
 ```
 pip install cryptography
 ```
+
+I am also using `methodtools` to have `lru_cache` for class methods. If you don't want it just remove the import and the decorator.
 
 The best way to use it is just copying and pasting the contents of the file to your project and avoid adding one more dependency. When copying the file you may extend it adding more functionality to it. That functionality may be useful to other users so please consider openning a pull request to add it to the current project.
 
@@ -42,7 +43,6 @@ from flightcryptofiledict import FileDict
 
 d = FileDict("newname", password="secretpassword")
 ```
-
 
 **Using different data types**
 
@@ -93,23 +93,59 @@ enc_filedict.compress(filename="compressed", compresslevel=7)
 
 The command above will generate the file: `compressed.tar.gz`
 
-
 ## `cryptofiledict.py`
 
-More or less the same as before but the salt is static. The salt is parsed as a base64 encoded string. It will be less secure but faster.
+More or less the same as before but the salt is static. The salt is parsed as a base64 encoded string. It will be less secure but faster. You can pass the salt as a string when creating a new dictionary. If not, it will try to get it from the environment variables.
 
 ## `sqldict.py`
 
-Uses an SQLite databse instead of the filesystem.
+Uses an SQLite database instead of the filesystem.
 
+## `cryptosqldict.py`
+
+Same as `flightcryptofiledict.py`, but uses an sqlite database instead of the file system. It only needs a password and generates a different salt for each item. The salt is stored in a table column and the data in another one.
+
+## Performance
+
+The performance method for each dictionary is calculated like this (adapted to each case):
+
+```
+In [1]: from cryptosqldict import SQLDict as d
+
+In [2]: dd = d("perf_test", password="mypass")
+
+In [3]: from string import ascii_lowercase as letters
+
+In [4]: from random import choice
+
+In [5]: def randstr(n):
+   ...:     return "".join([choice(letters) for _ in range(n)])
+
+In [6]: %%timeit
+   ...: dd[randstr(10)] = randstr(100)
+```
+
+**RESULTS:**
+
+`cryptosqldict.py`: 67.4 ms ± 2.6 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
+
+`sqldict.py`: 1.26 ms ± 261 µs per loop (mean ± std. dev. of 7 runs, 1000 loops each)
+
+`filedict.py`: 578 µs ± 40.3 µs per loop (mean ± std. dev. of 7 runs, 1000 loops each)
+
+`cryptofiledict.py`: 809 µs ± 35.2 µs per loop (mean ± std. dev. of 7 runs, 1000 loops each)
+
+`flightcryptofiledict.py`: 68.9 ms ± 1.87 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
 
 ## Meta
 
 Ricardo Ander-Egg Aguilar – [@ricardoanderegg](https://twitter.com/ricardoanderegg) –
 
-Distributed under the MIT license. See ``LICENSE`` for more information.
+- [ricardoanderegg.com](http://ricardoanderegg.com/)
+- [github.com/polyrand](https://github.com/polyrand/)
+- [linkedin.com/in/ricardoanderegg](http://linkedin.com/in/ricardoanderegg)
 
-[https://github.com/polyrand/](https://github.com/polyrand/)
+Distributed under the MIT license. See `LICENSE` for more information.
 
 ## Contributing
 

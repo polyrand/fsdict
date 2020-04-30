@@ -1,39 +1,88 @@
+import base64
 from collections.abc import MutableMapping
 from contextlib import suppress
 from operator import itemgetter
-import sqlite3
-
-import base64
 import os
 import secrets
+import sqlite3
+from threading import RLock
+from typing import ByteString, Callable, Optional, Union
 
-# import tarfile
-
-# from glob import glob
-from typing import Callable, Union, ByteString, Optional
-
-# import cryptography
 from cryptography.fernet import Fernet
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
-try:
-    from functools import cached_property as cache
-except ImportError:
-    from functools import wraps
+from methodtools import lru_cache
 
-    # decorator that does nothing and just runs the function, but accepts its kwargs
-    # I'm not sure if this is the best option
-    def cache(maxsize):
-        def wrapper(f):
-            @wraps(f)
-            def wrapped(*args, **kwargs):
-                return f(*args, **kwargs)
+_NOT_FOUND = object()
 
-            return wrapped
+# copied directly from python 3.8 source
+class cached_property:
+    def __init__(self, func):
+        self.func = func
+        self.attrname = None
+        self.__doc__ = func.__doc__
+        self.lock = RLock()
 
-        return wrapper
+    def __set_name__(self, owner, name):
+        if self.attrname is None:
+            self.attrname = name
+        elif name != self.attrname:
+            raise TypeError(
+                "Cannot assign the same cached_property to two different names "
+                f"({self.attrname!r} and {name!r})."
+            )
+
+    def __get__(self, instance, owner=None):
+        if instance is None:
+            return self
+        if self.attrname is None:
+            raise TypeError(
+                "Cannot use cached_property instance without calling __set_name__ on it."
+            )
+        try:
+            cache = instance.__dict__
+        except AttributeError:  # not all objects have __dict__ (e.g. class defines slots)
+            msg = (
+                f"No '__dict__' attribute on {type(instance).__name__!r} "
+                f"instance to cache {self.attrname!r} property."
+            )
+            raise TypeError(msg) from None
+        val = cache.get(self.attrname, _NOT_FOUND)
+        if val is _NOT_FOUND:
+            with self.lock:
+                # check if another thread filled cache while we awaited lock
+                val = cache.get(self.attrname, _NOT_FOUND)
+                if val is _NOT_FOUND:
+                    val = self.func(instance)
+                    try:
+                        cache[self.attrname] = val
+                    except TypeError:
+                        msg = (
+                            f"The '__dict__' attribute on {type(instance).__name__!r} instance "
+                            f"does not support item assignment for caching {self.attrname!r} property."
+                        )
+                        raise TypeError(msg) from None
+        return val
+
+
+# try:
+#     from functools import cached_property as cache
+# except ImportError:
+#     from functools import wraps
+
+#     # decorator that does nothing and just runs the function, but accepts its kwargs
+#     # I'm not sure if this is the best option
+#     def cache(maxsize):
+#         def wrapper(f):
+#             @wraps(f)
+#             def wrapped(*args, **kwargs):
+#                 return f(*args, **kwargs)
+
+#             return wrapped
+
+#         return wrapper
 
 
 class SQLDict(MutableMapping):
@@ -74,8 +123,7 @@ class SQLDict(MutableMapping):
         self.update(items, **kwargs)
 
     # 234375 == using 15mb of memory to cache fernet objects
-    # this will only have effect if running python >= 3.8
-    @cache(maxsize=234375)
+    @lru_cache(maxsize=234375)
     def _fernetgen(self, newsalt):
         kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),
@@ -114,7 +162,7 @@ class SQLDict(MutableMapping):
         newsalt = salt.encode()
         fernet = self._fernetgen(newsalt)
         value = fernet.decrypt(value)
-        return value.decode()
+        return self.decoder(value)
 
     def __delitem__(self, key):
         if key not in self:

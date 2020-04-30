@@ -1,24 +1,21 @@
+import base64
 from collections.abc import MutableMapping
 from contextlib import suppress
 import os
+from typing import Callable
 
-import base64
+from cryptography.fernet import Fernet
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-
-# import cryptography
-from cryptography.fernet import Fernet
-
-from typing import Callable, ByteString
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC  # , ByteString
 
 
 class FileDict(MutableMapping):
 
     """A password can be provided, default is from env.
-    
+
     The salt is expected as `str` to make it easy to set as an environment variable.
-    After being processed it returns a `ByteString`
+    After being processed it returns `bytes`
 
     The encoder/decoder can be overridden. The default value expected is a string so the default
     encoder/decoder is string.encode() and string.decode().
@@ -52,7 +49,7 @@ class FileDict(MutableMapping):
 
     >>> enc_filedict["mydict"]["a"]
     12
-    
+
     _______
 
     """
@@ -61,8 +58,8 @@ class FileDict(MutableMapping):
         self,
         dirname: str,
         pairs=(),
-        password: str = os.getenv("PASS").encode(),
-        salt: str = base64.decodebytes(
+        password: bytes = os.getenv("PASS").encode(),
+        salt: bytes = base64.decodebytes(
             os.getenv("SALT").encode().decode("unicode_escape").encode()
         ),
         encoder: Callable = lambda x: x.encode(),
@@ -71,8 +68,8 @@ class FileDict(MutableMapping):
     ):
         self.dirname: str = dirname
         # get PASS from env if it is not provided
-        self.password: str = password
-        self.salt: ByteString = salt  # provided as base64 string (not bytes)
+        self.password: bytes = password
+        self.salt: bytes = salt  # provided as base64 string (not bytes)
         self.kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),
             length=32,

@@ -72,12 +72,13 @@ function update () {
 }
 
 function install {
-    echo "install task not implemented"
+    assert_env
+    pip install -e .
 }
 
 function lint () {
     assert_env
-    seed-isort-config --application-directories=app
+    seed-isort-config --application-directories="$__dir"/"$appdir"
     isort --recursive  --force-single-line-imports --apply "$__dir"/"$appdir"
     autoflake --remove-all-unused-imports --recursive --remove-unused-variables --in-place "$__dir"/"$appdir" --exclude=__init__.py
     isort --multi-line=3 --trailing-comma --force-grid-wrap=0 --combine-as --line-width 88 --recursive --apply "$__dir"/"$appdir"
@@ -118,30 +119,10 @@ function publish () {
 }
 
 
-function build () {
-    echo "build task not implemented"
-}
-
 function tester () {
     echo "not implemented"
     assert_env
     # pytest ...
-}
-
-function buildprod {
-    echo "build task not implemented"
-    assert_env
-    # this runs in parallel
-    format & deps & tester & 
-    wait
-    echo "not implemented"
-    # shiv ...
-}
-
-function start {
-    echo "running app with uvicorn"
-    assert_env
-    uvicorn --workers 2 app.main:app --reload --reload-dir "$appdir"
 }
 
 function default {

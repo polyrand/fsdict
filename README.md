@@ -55,8 +55,8 @@ d = FileDict("newname", password="secretpassword")
 If the dictionary values need to be something different from strings a custom encoder/decoder can be passed. The only condition is that those functions should return a `bytes` object. Examples:
 
 ```python
->>> from flightcryptofiledict import FileDict
->>> enc_filedict = FileDict("cryptest")
+>>> from fsdict.flightcryptofiledict import FileDict
+>>> enc_filedict = FileDict("cryptest", password="password")
 
 >>> import pickle
 >>> import math

@@ -1,7 +1,7 @@
+import sqlite3
 from collections.abc import MutableMapping
 from contextlib import suppress
 from operator import itemgetter
-import sqlite3
 
 # Code from the talk [Build powerful, new data structures with Python's abstract base classes]
 # (https://www.youtube.com/watch?v=S_ipdVNSFlo) by [Raymond Hettinger](https://twitter.com/raymondh).

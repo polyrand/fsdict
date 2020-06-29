@@ -10,4 +10,5 @@ pip-tools
 pycodestyle
 pydocstyle
 pytest
+seed-isort-config
 setuptools

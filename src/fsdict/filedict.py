@@ -1,6 +1,6 @@
+import os
 from collections.abc import MutableMapping
 from contextlib import suppress
-import os
 
 
 class FileDict(MutableMapping):

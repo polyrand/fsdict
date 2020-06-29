@@ -1,7 +1,7 @@
 import base64
+import os
 from collections.abc import MutableMapping
 from contextlib import suppress
-import os
 from typing import Callable
 
 from cryptography.fernet import Fernet

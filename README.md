@@ -4,6 +4,12 @@ This started as "copying the code" from the talk [Build powerful, new data struc
 
 After that I started modifying the code and creating new utilities.
 
+Install with:
+
+```sh
+pip install fsdict
+```
+
 ## `flightcryptofiledict.py`
 
 Dictionary implementation that saves everything to files in disk.

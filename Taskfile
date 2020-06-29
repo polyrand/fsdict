@@ -111,11 +111,12 @@ function publish () {
 
     python3 setup.py sdist bdist_wheel
     python3 -m twine upload dist/*
+    clean
+
     echo "You probably want to also tag the version now:"
     echo "git tag -a ${VERSION} -m 'version ${VERSION}'"
     echo "git push --tags"
 
-    clean
 }
 
 

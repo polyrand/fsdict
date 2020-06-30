@@ -45,7 +45,7 @@ export PASS=mypass
 **When creating the dictionary:**
 
 ```python
-from flightcryptofiledict import FileDict
+from fsdict.flightcryptofiledict import FileDict
 
 d = FileDict("newname", password="secretpassword")
 ```
@@ -116,7 +116,7 @@ Same as `flightcryptofiledict.py`, but uses an sqlite database instead of the fi
 The performance method for each dictionary is calculated like this (adapted to each case):
 
 ```
-In [1]: from cryptosqldict import SQLDict as d
+In [1]: from fsdict.cryptosqldict import SQLDict as d
 
 In [2]: dd = d("perf_test", password="mypass")
 

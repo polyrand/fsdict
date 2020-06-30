@@ -30,7 +30,7 @@ pip install cryptography
 
 I am also using `methodtools` to have `lru_cache` for class methods. If you don't want it just remove the import and the decorator.
 
-The best way to use it is just copying and pasting the contents of the file to your project and avoid adding one more dependency. When copying the file you may extend it adding more functionality to it. That functionality may be useful to other users so please consider openning a pull request to add it to the current project.
+If you don't want to add another dependecy to your project, just copy and pasting the contents of the file to your project. When copying the file you may extend it adding more functionality to it. That functionality may be useful to other users so please consider openning a pull request to add it to the current project.
 
 ### Usage
 

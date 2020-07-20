@@ -26,11 +26,12 @@ class SQLDict(MutableMapping):
         password: Optional[str] = None,
         encoder: Callable = lambda x: x.encode(),
         decoder: Callable = lambda x: x.decode(),
-        cache_size: Union[float, int] = None,
+        # cache_size: Union[float, int] = None,
+        check_same_thread: bool = True,
         **kwargs,
     ):
         self.dbname = dbname
-        self.conn = sqlite3.connect(dbname)
+        self.conn = sqlite3.connect(dbname, check_same_thread=check_same_thread)
         c = self.conn.cursor()
         self.password: ByteString = os.getenv(
             "PASS"

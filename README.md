@@ -105,9 +105,9 @@ More or less the same as before but the salt is static. The salt is parsed as a 
 
 ## `sqldict.py`
 
-Uses an SQLite database instead of the filesystem.
+Uses an SQLite database instead of the filesystem. **This module doest NOT implement the encoding/decoding capabilities**. Right now it works as a key-value storage for string-like objects. This is planned for the 0.6.0 release.
 
-## `cryptosqldict.py`
+## `flightcryptosqldict.py`
 
 Same as `flightcryptofiledict.py`, but uses an sqlite database instead of the file system. It only needs a password and generates a different salt for each item. The salt is stored in a table column and the data in another one.
 
@@ -133,7 +133,7 @@ In [6]: %%timeit
 
 **RESULTS:**
 
-`cryptosqldict.py`: 67.4 ms ± 2.6 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
+`flightcryptosqldict.py`: 67.4 ms ± 2.6 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
 
 `sqldict.py`: 1.26 ms ± 261 µs per loop (mean ± std. dev. of 7 runs, 1000 loops each)
 
@@ -160,3 +160,11 @@ Distributed under the MIT license. See `LICENSE` for more information.
 3. Commit your changes (`git commit -am 'Add some fooBar'`)
 4. Push to the branch (`git push origin feature/fooBar`)
 5. Create a new Pull Request
+
+
+## Changelog
+
+* 0.5.3
+    * Add check_same_thread option to class initialization 
+    * Better naming for the modules
+    * Update README with missing information

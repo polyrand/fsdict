@@ -8,9 +8,9 @@ from operator import itemgetter
 
 
 class SQLDict(MutableMapping):
-    def __init__(self, dbname, items=[], **kwargs):
+    def __init__(self, dbname, items=[], check_same_thread=True, **kwargs):
         self.dbname = dbname
-        self.conn = sqlite3.connect(dbname)
+        self.conn = sqlite3.connect(dbname, check_same_thread=check_same_thread)
         c = self.conn.cursor()
         with suppress(sqlite3.OperationalError):
             c.execute("CREATE TABLE Dict (key text, value text)")

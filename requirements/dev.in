@@ -1,4 +1,6 @@
 autoflake
+twine
+wheel
 bandit
 black
 flake8

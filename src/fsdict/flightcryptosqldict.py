@@ -28,6 +28,7 @@ class SQLDict(MutableMapping):
         decoder: Callable = lambda x: x.decode(),
         # cache_size: Union[float, int] = None,
         check_same_thread: bool = True,
+        fast=True,
         **kwargs,
     ):
         self.dbname = dbname
@@ -49,6 +50,10 @@ class SQLDict(MutableMapping):
         with suppress(sqlite3.OperationalError):
             c.execute("CREATE TABLE Dict (key text, value blob, salt text)")
             c.execute("CREATE UNIQUE INDEX KIndx ON Dict (key)")
+            if fast:
+                c.execute("PRAGMA journal_mode = 'WAL';")
+                c.execute("PRAGMA synchronous = 1;")
+                c.execute(f"PRAGMA cache_size = {-1 * 64_000};")
 
         self.update(items, **kwargs)
 

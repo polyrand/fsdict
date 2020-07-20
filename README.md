@@ -111,6 +111,10 @@ Uses an SQLite database instead of the filesystem. **This module doest NOT imple
 
 Same as `flightcryptofiledict.py`, but uses an sqlite database instead of the file system. It only needs a password and generates a different salt for each item. The salt is stored in a table column and the data in another one.
 
+## Notes for SQLite
+
+Bith sqldict and flightcryptosqldict include an option called `fast`. By default it's set to `True`. This makes SQLite use [WAL mode](https://www.sqlite.org/wal.html) plus a few other optimizations to increase performance.
+
 ## Performance
 
 The performance method for each dictionary is calculated like this (adapted to each case):
@@ -130,6 +134,8 @@ In [5]: def randstr(n):
 In [6]: %%timeit
    ...: dd[randstr(10)] = randstr(100)
 ```
+
+The SQLite results were done without the speedup optimizations mentioned in the notes above.
 
 **RESULTS:**
 

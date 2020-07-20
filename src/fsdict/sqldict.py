@@ -8,13 +8,18 @@ from operator import itemgetter
 
 
 class SQLDict(MutableMapping):
-    def __init__(self, dbname, items=[], check_same_thread=True, **kwargs):
+    def __init__(self, dbname, items=[], check_same_thread=True, fast=True, **kwargs):
         self.dbname = dbname
         self.conn = sqlite3.connect(dbname, check_same_thread=check_same_thread)
         c = self.conn.cursor()
         with suppress(sqlite3.OperationalError):
             c.execute("CREATE TABLE Dict (key text, value text)")
             c.execute("CREATE UNIQUE INDEX KIndx ON Dict (key)")
+            if fast:
+                c.execute("PRAGMA journal_mode = 'WAL';")
+                c.execute("PRAGMA synchronous = 1;")
+                c.execute(f"PRAGMA cache_size = {-1 * 64_000};")
+
         self.update(items, **kwargs)
 
     def __setitem__(self, key, value):

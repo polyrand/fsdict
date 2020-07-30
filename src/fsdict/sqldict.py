@@ -1,4 +1,5 @@
 import sqlite3
+from typing import Callable
 from collections.abc import MutableMapping
 from contextlib import suppress
 from operator import itemgetter
@@ -8,12 +9,63 @@ from operator import itemgetter
 
 
 class SQLDict(MutableMapping):
-    def __init__(self, dbname, items=[], check_same_thread=True, fast=True, **kwargs):
+    """
+    Dictionary persisted to a SQLite database.
+
+    Example:
+    _______
+
+    >>> from fsdict.sqldict import SQLDict
+    >>> enc_sqldict = SQLDict("test.db")
+
+    >>> import pickle
+    >>> import math
+
+    >>> enc_sqldict.encoder = lambda x: pickle.dumps(x)
+    >>> enc_sqldict.decoder = lambda x: pickle.loads(x)
+
+    >>> enc_sqldict["myfunc"] = math.cos
+    >>> enc_sqldict["myfunc"]
+    <built-in function cos>
+
+    >>> enc_sqldict["myfunc"](23)
+    -0.5328330203333975
+
+    >>> import json
+    >>> enc_sqldict.encoder = lambda x: json.dumps(x).encode()
+    >>> enc_sqldict.decoder = lambda x: json.loads(x.decode())
+
+    >>> enc_sqldict["mydict"] = {"a": 12}
+    >>> enc_sqldict["mydict"]
+    {'a': 12}
+
+    >>> enc_sqldict["mydict"]["a"]
+    12
+
+    _______
+
+    """
+
+    def __init__(
+        self,
+        dbname,
+        items=[],
+        check_same_thread=True,
+        fast=True,
+        encoder: Callable = lambda x: x.encode(),
+        decoder: Callable = lambda x: x.encode(),
+        **kwargs,
+    ):
         self.dbname = dbname
         self.conn = sqlite3.connect(dbname, check_same_thread=check_same_thread)
         c = self.conn.cursor()
+        self.encoder = encoder
+        self.decoder = decoder
+
         with suppress(sqlite3.OperationalError):
-            c.execute("CREATE TABLE Dict (key text, value text)")
+            # converted value from text -> blob so that it accepts
+            # non-string values
+            c.execute("CREATE TABLE Dict (key text, value blob)")
             c.execute("CREATE UNIQUE INDEX KIndx ON Dict (key)")
             if fast:
                 c.execute("PRAGMA journal_mode = 'WAL';")
@@ -26,14 +78,14 @@ class SQLDict(MutableMapping):
         if key in self:
             del self[key]
         with self.conn as c:
-            c.execute("INSERT INTO  Dict VALUES (?, ?)", (key, value))
+            c.execute("INSERT INTO  Dict VALUES (?, ?)", (key, self.encoder(value)))
 
     def __getitem__(self, key):
         c = self.conn.execute("SELECT value FROM Dict WHERE Key=?", (key,))
         row = c.fetchone()
         if row is None:
             raise KeyError(key)
-        return row[0]
+        return self.decoder(row[0])
 
     def __delitem__(self, key):
         if key not in self:

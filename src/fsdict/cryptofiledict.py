@@ -1,7 +1,9 @@
 import base64
+from typing import bytes
 import os
 from collections.abc import MutableMapping
 from contextlib import suppress
+import secrets
 from typing import Callable
 
 from cryptography.fernet import Fernet
@@ -23,8 +25,8 @@ class FileDict(MutableMapping):
     Example:
     _______
 
-    >>> from cryptofiledict import FileDict
-    >>> enc_filedict = FileDict("cryptest")
+    >>> from fsdict.cryptofiledict import FileDict
+    >>> enc_filedict = FileDict("cryptest", password="mysecret")
 
     >>> import pickle
     >>> import math
@@ -34,7 +36,7 @@ class FileDict(MutableMapping):
 
     >>> enc_filedict["myfunc"] = math.cos
     >>> enc_filedict["myfunc"]
-    <function math.cos(x, /)>
+    <built-in function cos>
 
     >>> enc_filedict["myfunc"](23)
     -0.5328330203333975
@@ -58,8 +60,8 @@ class FileDict(MutableMapping):
         self,
         dirname: str,
         pairs=(),
-        password: str = None,
-        salt: str = None,
+        password: Optional[str] = None,
+        salt: Optional[str] = None,
         encoder: Callable = lambda x: x.encode(),
         decoder: Callable = lambda x: x.decode(),
         **kwargs,
@@ -69,9 +71,15 @@ class FileDict(MutableMapping):
         self.password: bytes = os.getenv(
             "PASS"
         ).encode() if not password else password.encode()
-        self.salt: bytes = base64.decodebytes(
-            os.getenv("SALT").encode().decode("unicode_escape").encode()
-        ) if not salt else salt.encode()  # provided as base64 string (not bytes)
+
+        if os.getenv("SALT"):
+            self.salt: bytes = base64.decodebytes(
+                os.getenv("SALT").encode().decode("unicode_escape").encode()
+            )
+        else:
+            self.salt: bytes = secrets.token_urlsafe(
+                32
+            ).encode() if not salt else salt.encode()  # provided as base64 string (not bytes)
         self.kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),
             length=32,

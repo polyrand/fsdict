@@ -16,16 +16,17 @@ from methodtools import lru_cache
 
 class SQLDict(MutableMapping):
     """
-    SQLite based mutable mapping.
+    SQLite based mutable mapping with the contents encrypted.
 
-    The contents are encrypted and the salt/encoder is created
-    'in-flight'. So every time a new value is inserted, a new
-    salt+encoder is created. Same for decoding.
+    Every time the object is instantiated a new salt will be created if none
+    is provided. The salt is saved in the SQL table too so that we can always decode the
+    values if we have the password
+
 
     Example:
     _______
 
-    >>> from fsdict.flightcryptosqldict import SQLDict
+    >>> from fsdict.cryptosqldict import SQLDict
     >>> enc_sqldict = SQLDict("cryptest", password="mysecret")
 
     >>> import pickle
@@ -64,6 +65,7 @@ class SQLDict(MutableMapping):
         dbname,
         items=[],
         password: Optional[str] = None,
+        salt: Optional[str] = None,
         encoder: Callable = lambda x: x.encode(),
         decoder: Callable = lambda x: x.decode(),
         # cache_size: Union[float, int] = None,
@@ -74,18 +76,11 @@ class SQLDict(MutableMapping):
         self.dbname = dbname
         self.conn = sqlite3.connect(dbname, check_same_thread=check_same_thread)
         c = self.conn.cursor()
-        self.password: ByteString = os.getenv(
+        self.password: bytes = os.getenv(
             "PASS"
         ).encode() if not password else password.encode()
         self.encoder = encoder
         self.decoder = decoder
-
-        # 6.4e-05 is de size in MB of a fernet object that can
-        # encrypt / decrypt data (measured with sys.getsizeof)
-        # 234375 == using 15mb of memory to cache fernet objects
-        # if cache_size:
-        #     nonlocal cache_n
-        #     cache_n = cache_size / 6.4e-05
 
         with suppress(sqlite3.OperationalError):
             c.execute("CREATE TABLE Dict (key text, value blob, salt text)")
@@ -95,34 +90,43 @@ class SQLDict(MutableMapping):
                 c.execute("PRAGMA synchronous = 1;")
                 c.execute(f"PRAGMA cache_size = {-1 * 64_000};")
 
-        self.update(items, **kwargs)
+        # check if there's a salt
+        salt_check = self.conn.execute("SELECT salt from Dict LIMIT 1").fetchall()
+        if salt_check:
+            self.salt = self.conn.execute("SELECT salt FROM Dict LIMIT 1").fetchone()[0]
+        else:
+            if os.getenv("SALT"):
+                self.salt: bytes = base64.decodebytes(
+                    os.getenv("SALT").encode().decode("unicode_escape").encode()
+                )
+            else:
+                self.salt: bytes = secrets.token_urlsafe(
+                    32
+                ).encode() if not salt else salt.encode()  # provided as base64 string (not bytes)
 
-    # 234375 == using 15mb of memory to cache fernet objects
-    @lru_cache(maxsize=234375)
-    def _fernetgen(self, newsalt):
-        kdf = PBKDF2HMAC(
+        self.kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),
             length=32,
-            salt=newsalt,
+            salt=self.salt,
             iterations=100000,
             backend=default_backend(),
         )
+        self.key = base64.urlsafe_b64encode(self.kdf.derive(self.password))
+        self.fernet = Fernet(self.key)
 
-        key = base64.urlsafe_b64encode(kdf.derive(self.password))
-
-        return Fernet(key)
+        self.update(items, **kwargs)
 
     def __setitem__(self, key, value):
         if key in self:
             del self[key]
 
-        salt = secrets.token_urlsafe(64)
         value = self.encoder(value)
-        newsalt = salt.encode()
-        fernet = self._fernetgen(newsalt)
-        value = fernet.encrypt(value)
+        value = self.fernet.encrypt(value)
         with self.conn as c:
-            c.execute("INSERT INTO  Dict VALUES (?, ?, ?)", (key, value, salt))
+            # decode the salt to save it
+            c.execute(
+                "INSERT INTO  Dict VALUES (?, ?, ?)", (key, value, self.salt.decode())
+            )
 
     def __getitem__(self, key):
         c = self.conn.execute("SELECT value, salt FROM Dict WHERE Key=?", (key,))
@@ -131,9 +135,7 @@ class SQLDict(MutableMapping):
             raise KeyError(key)
         value = row[0]
         salt = row[1]
-        newsalt = salt.encode()
-        fernet = self._fernetgen(newsalt)
-        value = fernet.decrypt(value)
+        value = self.fernet.decrypt(value)
         return self.decoder(value)
 
     def __delitem__(self, key):

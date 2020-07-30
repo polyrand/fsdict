@@ -170,6 +170,12 @@ Distributed under the MIT license. See `LICENSE` for more information.
 
 ## Changelog
 
+
+* 0.6
+    * Make `fsdict.sqldict` store values as blobs instead of text
+    * Add doctests
+    * Add `fsdict.cryptosqldict`
+    * Better PASS/SALT handling when passing environment variables
 * 0.5.3
     * Add check_same_thread option to class initialization 
     * Better naming for the modules

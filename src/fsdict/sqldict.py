@@ -53,7 +53,7 @@ class SQLDict(MutableMapping):
         check_same_thread=True,
         fast=True,
         encoder: Callable = lambda x: x.encode(),
-        decoder: Callable = lambda x: x.encode(),
+        decoder: Callable = lambda x: x.decode(),
         **kwargs,
     ):
         self.dbname = dbname
@@ -75,10 +75,19 @@ class SQLDict(MutableMapping):
         self.update(items, **kwargs)
 
     def __setitem__(self, key, value):
-        if key in self:
-            del self[key]
+        # if key in self:
+        #     with self.conn as c:
+        #         c.execute(
+        #             "UPDATE Dict SET value = ? WHERE key = ?",
+        #             (self.encoder(value), key),
+        #         )
+        #     return
+
+        # del self[key]
         with self.conn as c:
-            c.execute("INSERT INTO  Dict VALUES (?, ?)", (key, self.encoder(value)))
+            c.execute(
+                "INSERT OR REPLACE INTO  Dict VALUES (?, ?)", (key, self.encoder(value))
+            )
 
     def __getitem__(self, key):
         c = self.conn.execute("SELECT value FROM Dict WHERE Key=?", (key,))

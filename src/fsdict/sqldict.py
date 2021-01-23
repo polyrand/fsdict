@@ -1,4 +1,5 @@
 import sqlite3
+import json
 from typing import Callable
 from collections.abc import MutableMapping
 from contextlib import suppress
@@ -113,6 +114,83 @@ class SQLDict(MutableMapping):
         return (
             f"{type(self).__name__}(dbname={self.dbname!r}, items={list(self.items())})"
         )
+
+    def vacuum(self):
+        with self.conn as c:
+            c.execute("VACUUM;")
+
+    def close(self):
+        self.conn.close()
+
+
+class StringSQLDict(MutableMapping):
+    def __init__(
+        self,
+        dbname,
+        check_same_thread=False,
+        fast=True,
+        encoder: Callable = lambda x: json.dumps(x),
+        decoder: Callable = lambda x: json.loads(x),
+        **kwargs,
+    ):
+        self.dbname = dbname
+        self.conn = sqlite3.connect(
+            self.dbname, check_same_thread=check_same_thread, **kwargs
+        )
+        self.encoder = encoder
+        self.decoder = decoder
+
+        with self.conn as c:
+            c.execute(
+                "CREATE TABLE IF NOT EXISTS Dict (key text NOT NULL PRIMARY KEY, value text)"
+            )
+
+            c.execute(
+                "CREATE TABLE IF NOT EXISTS Counter (key text NOT NULL PRIMARY KEY, value integer)"
+            )
+
+            if fast:
+                c.execute("PRAGMA journal_mode = 'WAL';")
+                c.execute("PRAGMA synchronous = 1;")
+                c.execute(f"PRAGMA cache_size = {-1 * 64_000};")
+
+    def __setitem__(self, key: str, value):
+        with self.conn as c:
+            c.execute(
+                "INSERT OR REPLACE INTO  Dict VALUES (?, ?)", (key, self.encoder(value))
+            )
+
+    def __getitem__(self, key: str):
+        c = self.conn.execute("SELECT value FROM Dict WHERE Key=?", (key,))
+        row = c.fetchone()
+        if row is None:
+            raise KeyError(key)
+        return self.decoder(row[0])
+
+    def __delitem__(self, key: str):
+        if key not in self:
+            raise KeyError(key)
+        with self.conn as c:
+            c.execute("DELETE FROM Dict WHERE key=?", (key,))
+
+    def __len__(self):
+        return next(self.conn.execute("SELECT COUNT(*) FROM Dict"))[0]
+
+    def __iter__(self):
+        c = self.conn.execute("SELECT key FROM Dict")
+        return map(itemgetter(0), c.fetchall())
+
+    def __repr__(self):
+        return (
+            f"{type(self).__name__}(dbname={self.dbname!r}, items={list(self.items())})"
+        )
+
+    def glob(self, pat: str):
+        c = self.conn.execute("SELECT value FROM Dict WHERE Key GOLB ?", (pat,))
+        row = c.fetchone()
+        if row is None:
+            raise KeyError(pat)
+        return self.decoder(row[0])
 
     def vacuum(self):
         with self.conn as c:

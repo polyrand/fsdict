@@ -12,7 +12,6 @@ from cryptography.fernet import Fernet
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-from methodtools import lru_cache
 
 
 class FileDict(MutableMapping):
@@ -96,7 +95,6 @@ class FileDict(MutableMapping):
         self.update(pairs, **kwargs)
 
     # 234375 == using 15mb of memory to cache fernet objects
-    @lru_cache(maxsize=234375)
     def fernetgen(self, newsalt):
         kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),

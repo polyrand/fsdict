@@ -28,8 +28,6 @@ It is a single self-contained 200 lines-of-code file. The only dependency is `cr
 pip install cryptography
 ```
 
-I am also using `methodtools` to have `lru_cache` for class methods. If you don't want it just remove the import and the decorator.
-
 If you don't want to add another dependecy to your project, just copy and pasting the contents of the file to your project. When copying the file you may extend it adding more functionality to it. That functionality may be useful to other users so please consider openning a pull request to add it to the current project.
 
 ### Usage
